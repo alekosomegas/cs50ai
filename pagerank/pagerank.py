@@ -57,7 +57,10 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+    probability_distribution = {k: (1-damping_factor) * 1/len(corpus) for k in corpus}
+    for link in corpus[page]:
+        probability_distribution[link] += 1/len(corpus[page]) * damping_factor
+    return probability_distribution
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,7 +72,16 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    samples = {k: 0 for k in corpus}
+    starting_page = random.choice(list(corpus.keys()))
+    for i in range(n):
+        model = transition_model(corpus, starting_page, damping_factor)
+        # choose one as random based on percentages for the next iteration
+        starting_page = random.choices(
+            [page for page in model.keys()],
+            weights=[v for v in model.values()])[0]
+        samples[starting_page] += 1
+    return {k: v/n for (k, v) in samples.items()}
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -81,7 +93,26 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    page_ranks = {k: 1/len(corpus) for k in corpus}
+    page_refs = {k: [] for k in corpus}
+    min_dif = 0.001
+
+    for page in corpus:
+        for ref, links in corpus.items():
+            if ref == page:
+                continue
+            if page in links:
+                page_refs[page].append(ref)
+
+    while page_refs:
+        for page, refs in page_refs.copy().items():
+            prev = page_ranks[page]
+            new = (1-damping_factor) / len(corpus) + damping_factor * sum([page_ranks[x] / len(corpus[x]) for x in refs])
+            page_ranks[page] = new
+            if abs(new - prev) < min_dif:
+                page_refs.__delitem__(page)
+
+    return page_ranks
 
 
 if __name__ == "__main__":
